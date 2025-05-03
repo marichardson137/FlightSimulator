@@ -236,7 +236,9 @@ int main(void)
             .angularVelocity = Vector3Zero(),
             .inertia = inertia,
             .inverseInertia = inverseInertia,
-            .applyGravity = false
+            .applyGravity = false,
+            .force = Vector3Zero(),
+            .torque = Vector3Zero()
         },
         .engine = {
             .throttle = 1.0f,
@@ -262,12 +264,12 @@ int main(void)
         // --- USER INPUT ---
         if (IsKeyDown(KEY_W)) plane.engine.throttle += 0.5f * dt;
         if (IsKeyDown(KEY_S)) plane.engine.throttle -= 0.5f * dt;
-        plane.engine.throttle = Clamp(plane.engine.throttle, 0.0f, 1.0f);
+        plane.engine.throttle = Clamp(plane.engine.throttle, 0.0f, 2.0f);
 
         // Roll: Ailerons (Left/Right)
         float roll_input = 0.0f;
-        if (IsKeyDown(KEY_LEFT)) roll_input = -1.0f;
-        if (IsKeyDown(KEY_RIGHT)) roll_input = 1.0f;
+        if (IsKeyDown(KEY_LEFT)) roll_input = 1.0f;
+        if (IsKeyDown(KEY_RIGHT)) roll_input = -1.0f;
         WingSetControlInput(&plane.wings[1], roll_input); // Left aileron
         WingSetControlInput(&plane.wings[2], -roll_input); // Right aileron (opposite)
 
@@ -313,7 +315,7 @@ int main(void)
         DrawModel(planeModel, (Vector3){0, 0, 0}, 1.0f, RAYWHITE);
         
         // Apply the same transformation to the sphere
-        Vector3 transformedPosition = Vector3Transform(plane.rb.position, transform);
+        Vector3 transformedPosition = Vector3Transform(Vector3Zero(), transform);
         DrawSphere(transformedPosition, 0.2f, RED);
         
         // Update camera to follow the transformed position of the plane
@@ -323,6 +325,9 @@ int main(void)
         EndMode3D();
         EndDrawing();
     }
+
+    // Clean up
+    UnloadModel(planeModel);
 
     CloseWindow();
 
