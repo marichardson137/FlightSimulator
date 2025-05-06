@@ -816,7 +816,7 @@ int main(void)
             camera.position = Vector3Add(plane.rb.position, relativeOffset);
             camera.target = plane.rb.position;
             camera.up = WORLD_UP;
-}
+        }
         
         // Toggle debug visuals
         if (IsKeyPressed(KEY_F1)) debug.showCoordinateSystem = !debug.showCoordinateSystem;
