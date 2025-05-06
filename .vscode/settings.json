@@ -2,6 +2,7 @@
     "files.associations": {
         "complex": "c",
         "cmath": "c",
-        "__node_handle": "c"
+        "__node_handle": "c",
+        "raylib.h": "c"
     }
 }

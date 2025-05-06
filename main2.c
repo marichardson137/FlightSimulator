@@ -121,48 +121,51 @@ void AddRelativeForce(RigidBody* rbp, Vector3 force, const char* debugName) {
 
 // Update rigid body physics using semi-implicit Euler integration
 void UpdateRigidBody(RigidBody* rbp, float dt) {
-    // Apply gravity if enabled
-    if (rbp->applyGravity) {
-        rbp->force.y -= rbp->mass * GRAVITY_ACCELERATION;
-    }
-    
-    // Calculate linear acceleration
-    Vector3 acceleration = Vector3Scale(rbp->force, 1.0f / rbp->mass);
-    
-    // Update velocity with damping
-    // TODO: linear damping
-    rbp->velocity = Vector3Add(rbp->velocity, Vector3Scale(acceleration, dt));
-    
-    // Update position
-    rbp->position = Vector3Add(rbp->position, Vector3Scale(rbp->velocity, dt));
-    
-    // Calculate angular acceleration from torque (I⁻¹(τ - ω × (Iω)))
-    Vector3 angularMomentum = Vector3Transform(rbp->angularVelocity, rbp->inertia);
-    Vector3 gyroscopicTorque = Vector3CrossProduct(rbp->angularVelocity, angularMomentum);
-    Vector3 netTorque = Vector3Subtract(rbp->torque, gyroscopicTorque);
-    Vector3 angularAcceleration = Vector3Transform(netTorque, rbp->inverseInertia);
-    
-    // Update angular velocity with damping
-    // TODO: angular damping
-    rbp->angularVelocity = Vector3Add(rbp->angularVelocity, Vector3Scale(angularAcceleration, dt));
-
-    // TraceLog(LOG_INFO, "Angular Velocity: %0.5f %0.5f %0.5f", rbp->angularVelocity.x, rbp->angularVelocity.y, rbp->angularVelocity.z);
+     // Apply gravity
+     rbp->force.y -= rbp->mass * GRAVITY_ACCELERATION;
         
-    // Update orientation using quaternion differential equation
-    // dq/dt = 0.5 * q * w (where w is the angular velocity quaternion)
-    Quaternion angularVelQuat = {0, rbp->angularVelocity.x, rbp->angularVelocity.y, rbp->angularVelocity.z};
-    Quaternion orientationDelta = QuaternionScale(
-        QuaternionMultiply(rbp->orientation, angularVelQuat),
-        0.5f * dt
-    );
-    rbp->orientation = QuaternionAdd(rbp->orientation, orientationDelta);
-    
-    // Normalize the quaternion to prevent drift
-    rbp->orientation = QuaternionNormalize(rbp->orientation);
-    
-    // Reset force and torque accumulators
-    rbp->force = Vector3Zero();
-    rbp->torque = Vector3Zero();
+     // Calculate linear acceleration (F = ma → a = F/m)
+     Vector3 acceleration = Vector3Scale(rbp->force, 1.0f / rbp->mass);
+ 
+     // Update velocity
+     rbp->velocity = Vector3Add(rbp->velocity, Vector3Scale(acceleration, dt));
+ 
+     // Update position
+     rbp->position = Vector3Add(rbp->position, Vector3Scale(rbp->velocity, dt));
+ 
+     // Calculate angular momentum (I·ω)
+     Vector3 angularMomentum = Vector3Transform(rbp->angularVelocity, rbp->inertia);
+ 
+     // Calculate gyroscopic torque (ω × (I·ω))
+     Vector3 gyroscopicTorque = Vector3CrossProduct(rbp->angularVelocity, angularMomentum);
+ 
+     // Net torque = applied torque - gyroscopic torque
+     Vector3 netTorque = Vector3Subtract(rbp->torque, gyroscopicTorque);
+ 
+     // Calculate angular acceleration (I⁻¹·τ)
+     Vector3 angularAcceleration = Vector3Transform(netTorque, rbp->inverseInertia);
+ 
+     // Update angular velocity
+     rbp->angularVelocity = Vector3Add(rbp->angularVelocity, Vector3Scale(angularAcceleration, dt));
+ 
+     // Create a quaternion from angular velocity
+     Quaternion angularVelQuat = {rbp->angularVelocity.x, rbp->angularVelocity.y, rbp->angularVelocity.z, 0.0f};
+ 
+     // Calculate orientation change (dq/dt = 0.5 * q * ω_quat)
+     Quaternion orientationDelta = QuaternionScale(
+         QuaternionMultiply(rbp->orientation, angularVelQuat),
+         0.5f * dt
+     );
+ 
+     // Update orientation
+     rbp->orientation = QuaternionAdd(rbp->orientation, orientationDelta);
+ 
+     // Normalize the quaternion to prevent drift
+     rbp->orientation = QuaternionNormalize(rbp->orientation);
+ 
+     // Reset force and torque accumulators
+     rbp->force = Vector3Zero();
+     rbp->torque = Vector3Zero();
 }
 
 // Engine
