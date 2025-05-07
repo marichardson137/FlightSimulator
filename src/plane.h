@@ -12,6 +12,7 @@ typedef struct {
     float throttle; // 0.0 to 1.0
     float maxThrust; // Maximum thrust in Newtons
     float propellerRadius; // TODO: need?
+    float propellerAngle;
     Vector3 position; // Local coordinates
     Vector3 direction; // Local coordinates
     bool running; // Engine state

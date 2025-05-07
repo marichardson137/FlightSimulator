@@ -18,6 +18,7 @@ int main(void)
     const int screenHeight = 720;
     InitWindow(screenWidth, screenHeight, "Flight Simulator");
     SetTargetFPS(60);
+    SetWindowFocused();
     HideCursor();
     DisableCursor();
 
@@ -80,6 +81,7 @@ int main(void)
     plane.engine.throttle = 0.5f;
     plane.engine.maxThrust = 10000.0f;
     plane.engine.propellerRadius = 0.8f;
+    plane.engine.propellerAngle = 0.0f;
     plane.engine.position = (Vector3) { 0.0f, 0.0f, 0.0f }; // Center of plane
     plane.engine.direction = MODEL_FORWARD; // Forward
     plane.engine.running = true;
@@ -165,6 +167,7 @@ int main(void)
             plane.rb.velocity = (Vector3) { STARTING_VELOCITY, 0.0f, 0.0f };
             plane.rb.orientation = QuaternionIdentity();
             plane.rb.angularVelocity = Vector3Zero();
+            camera.position = (Vector3) { 0.0f, 100.0f, 0.0f };
         }
 
         // Handle keyboard input
@@ -245,12 +248,31 @@ int main(void)
         DrawGrid(100, 10.0f);
 
         // Draw plane model
-        Matrix planeTransform = QuaternionToMatrix(plane.rb.orientation);
-        // planeModel.transform = planeTransform;
-        // DrawModel(planeModel, plane.rb.position, 1.0f, WHITE);
-        Matrix meshTransform = MatrixMultiply(planeTransform, MatrixTranslate(plane.rb.position.x, plane.rb.position.y, plane.rb.position.z));
+
+        // Update propeller angle
+        plane.engine.propellerAngle += plane.engine.throttle * 50.0f * deltaTime;
+
+        // Plane's global transform
+        Matrix orientationMatrix = QuaternionToMatrix(plane.rb.orientation);
+        Matrix translationMatrix = MatrixTranslate(plane.rb.position.x, plane.rb.position.y, plane.rb.position.z);
+        Matrix planeTransform = MatrixMultiply(orientationMatrix, translationMatrix);
+
         for (int i = 0; i < planeModel.meshCount; i++) {
-            DrawMesh(planeModel.meshes[i], materials[i], meshTransform);
+            Matrix localMeshTransform = MatrixIdentity();
+
+            if (i == 10) {
+                // Local pivot point of propeller in model space
+                float yOffset = 0.27f; // propeller center in model/local space
+                Matrix toPivot = MatrixTranslate(0.0f, yOffset, 0.0f);
+                Matrix fromPivot = MatrixTranslate(0.0f, -yOffset, 0.0f);
+                Matrix rotation = MatrixRotateX(plane.engine.propellerAngle); // Spin around local X
+
+                // Rotate around pivot: T⁻¹ * R * T
+                localMeshTransform = MatrixMultiply(MatrixMultiply(fromPivot, rotation), toPivot);
+            }
+
+            Matrix finalTransform = MatrixMultiply(localMeshTransform, planeTransform);
+            DrawMesh(planeModel.meshes[i], materials[i], finalTransform);
         }
 
         float axisLength = 3.0f;
