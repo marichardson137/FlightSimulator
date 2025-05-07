@@ -58,7 +58,7 @@ int main(void)
     }
 
     // Set up lighting shader values
-    SetShaderValue(lighting, GetShaderLocation(lighting, "ambient"), (float[4]) { 0.5f, 0.5f, 0.5f, 1.0f }, SHADER_UNIFORM_VEC4);
+    SetShaderValue(lighting, GetShaderLocation(lighting, "ambient"), (float[4]) { 2.5f, 2.5f, 2.5f, 1.0f }, SHADER_UNIFORM_VEC4);
     SetShaderValue(lighting, GetShaderLocation(lighting, "viewPos"), &camera.position, SHADER_UNIFORM_VEC3); // Camera position
 
     // Enable light
@@ -69,15 +69,16 @@ int main(void)
     // Load heightmap image (can be procedural too)
     Image heightmap
         = GenImagePerlinNoise(1024, 1024, 0, 0, 16);
-    ImageBlurGaussian(&heightmap, 1);
+    // ImageBlurGaussian(&heightmap, 1);
     Texture2D heightmapTex = LoadTextureFromImage(heightmap);
 
     // Create terrain mesh
     Mesh terrainMesh = GenMeshHeightmap(heightmap, (Vector3) { 128, 16, 128 });
+
     Model terrain = LoadModelFromMesh(terrainMesh);
-    terrain.materials[0].maps[MATERIAL_MAP_DIFFUSE].color = GREEN;
+    terrain.materials[0].maps[MATERIAL_MAP_DIFFUSE].color = BEIGE;
     terrain.materials[0].maps[MATERIAL_MAP_DIFFUSE].texture = heightmapTex;
-    terrain.materials[0].shader = lighting;
+    // terrain.materials[0].shader = lighting;
 
     // Plane physics
 
@@ -343,14 +344,14 @@ int main(void)
 
         // Drawing
         BeginDrawing();
-        ClearBackground(SKYBLUE);
+        ClearBackground((Color) { 38, 38, 38, 255 });
 
         BeginMode3D(camera);
 
         // Draw ground grid for reference
         // DrawGrid(100, 10.0f);
 
-        DrawModel(terrain, (Vector3) { -512, 0, -512 }, 10.0f, (Color) { 144, 238, 144, 255 });
+        DrawModel(terrain, (Vector3) { -512, 0, -512 }, 10.0f, (Color) { 255, 255, 255, 255 });
 
         // Draw plane model
 
