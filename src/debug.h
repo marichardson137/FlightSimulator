@@ -18,9 +18,7 @@ typedef struct {
     Color liftColor;
     Color dragColor;
     Color velocityColor;
-    int currentView;  // 0=chase, 1=cockpit, 2=free
+    int currentView; // 0=chase, 1=cockpit, 2=free
 } DebugSettings;
-
-
 
 #endif // DEBUG_H
