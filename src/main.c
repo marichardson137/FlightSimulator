@@ -39,7 +39,6 @@ int main(void)
     camera.fovy = 45.0f;
 
     Vector3 cameraOffset = (Vector3) { -10.0f, 3.0f, 0.0f }; // Offset behind and above
-    Vector3 cameraVelocity = Vector3Zero(); // For smoothing
     float cameraSmoothness = 5.0f; // Higher = snappier
 
     // Load plane model
@@ -47,7 +46,6 @@ int main(void)
     Material materials[20]; // assuming max 20 meshes
     for (int i = 0; i < planeModel.meshCount; i++) {
         materials[i] = LoadMaterialDefault();
-        Color color = ColorFromHSV(i * (360.0f / planeModel.meshCount), 0.7f, 0.9f);
         materials[i].maps[MATERIAL_MAP_DIFFUSE].color = WHITE;
     }
 
@@ -62,7 +60,7 @@ int main(void)
     SetShaderValue(lighting, GetShaderLocation(lighting, "viewPos"), &camera.position, SHADER_UNIFORM_VEC3); // Camera position
 
     // Enable light
-    Light light = CreateLight(LIGHT_DIRECTIONAL, (Vector3) { 10000, 10000, 10000 }, (Vector3) { 0, 0, 0 }, WHITE, lighting);
+    CreateLight(LIGHT_DIRECTIONAL, (Vector3) { 10000, 10000, 10000 }, (Vector3) { 0, 0, 0 }, WHITE, lighting);
 
     // Terrain
 
@@ -326,7 +324,7 @@ int main(void)
         // Draw ground grid for reference
         // DrawGrid(100, 10.0f);
 
-        DrawModel(terrain, (Vector3) { -512, 0, -512 }, 10.0f, (Color) { 144, 238, 144, 255 });
+        DrawModelWires(terrain, (Vector3) { -512, 0, -512 }, 10.0f, (Color) { 144, 238, 144, 255 });
 
         // Draw plane model
 
@@ -349,9 +347,35 @@ int main(void)
                 localMeshTransform = MatrixMultiply(MatrixMultiply(fromPivot, rotation), toPivot);
             }
 
+            if (i == 5) {
+                // Local pivot point of propeller in model space
+                float xOffset = -5.0f; // propeller center in model/local space
+                Matrix toPivot = MatrixTranslate(xOffset, 0.0f, 0.0f);
+                Matrix fromPivot = MatrixTranslate(-xOffset, 0.0f, 0.0f);
+                Matrix rotation = MatrixRotateZ((-plane.wings[2].controlInput) * 30 * DEG2RAD); // Spin around local X
+
+                // Rotate around pivot: T⁻¹ * R * T
+                localMeshTransform = MatrixMultiply(MatrixMultiply(fromPivot, rotation), toPivot);
+            }
+
+            if (i == 6) {
+                // Local pivot point of propeller in model space
+                float xOffset = -5.5f; // propeller center in model/local space
+                Matrix toPivot = MatrixTranslate(xOffset, 0.0f, 0.0f);
+                Matrix fromPivot = MatrixTranslate(-xOffset, 0.0f, 0.0f);
+                Matrix rotation = MatrixRotateY((-plane.wings[3].controlInput) * 15 * DEG2RAD); // Spin around local X
+
+                // Rotate around pivot: T⁻¹ * R * T
+                localMeshTransform = MatrixMultiply(MatrixMultiply(fromPivot, rotation), toPivot);
+            }
+
             Matrix finalTransform = MatrixMultiply(localMeshTransform, planeTransform);
             DrawMesh(planeModel.meshes[i], materials[i], finalTransform);
         }
+
+        // Matrix localMeshTransform = MatrixIdentity();
+        // Matrix finalTransform = MatrixMultiply(localMeshTransform, planeTransform);
+        // DrawMesh(planeModel.meshes[3], materials[3], finalTransform);
 
         float axisLength = 3.0f;
         Vector3 origin = plane.rb.position;
