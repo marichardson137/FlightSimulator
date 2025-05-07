@@ -27,6 +27,10 @@ int main(void)
     camera.projection = CAMERA_PERSPECTIVE;
     camera.fovy = 45.0f;
 
+    Vector3 cameraOffset = (Vector3){ -10.0f, 3.0f, 0.0f };  // Offset behind and above
+    Vector3 cameraVelocity = Vector3Zero(); // For smoothing
+    float cameraSmoothness = 5.0f;          // Higher = snappier
+
     // Load plane model
     Model planeModel = LoadModel("assets/models/cessna172.glb");
 
@@ -46,9 +50,9 @@ int main(void)
     plane.wingCount = 0;
 
     Matrix inertia = {
-        .m0 = 2424.3f, .m1 = 0.0f,    .m2 = -161.5f, .m3 = 0.0f,
+        .m0 = 2424.3f, .m1 = 0.0f,    .m2 = 0.0f, .m3 = 0.0f,
         .m4 = 0.0f,    .m5 = 2426.2f, .m6 = 0.0f,    .m7 = 0.0f,
-        .m8 = -161.5f, .m9 = 0.0f,    .m10 = 4372.5f,.m11 = 0.0f,
+        .m8 = 0.0f, .m9 = 0.0f,    .m10 = 4372.5f,.m11 = 0.0f,
         .m12 = 0.0f,   .m13 = 0.0f,   .m14 = 0.0f,   .m15 = 1.0f
     };    
     Matrix inverseInertia = MatrixInvert(inertia);
@@ -216,23 +220,27 @@ int main(void)
 
             while (physicsAccumulator >= FIXED_PHYSICS_TIMESTEP) {
                 // Update plane physics with fixed timestep
-                // AddRelativeForce(&rb, (Vector3) {0.0f, 10000.0f, 0.0f });
-                // AddForceAtPoint(&plane.rb, force, point);
-                // TraceLog(LOG_INFO, "Torque: %0.5f %0.5f %0.5f", rb.torque.x, rb.torque.y, rb.torque.z);
                 UpdatePlane(&plane, FIXED_PHYSICS_TIMESTEP);
                 physicsAccumulator -= FIXED_PHYSICS_TIMESTEP;
             }
-        }
 
-        // Camera
-        // UpdateCamera(&camera, CAMERA_FREE);
-        
-        // Position camera behind and slightly above the plane
-        Vector3 offset = {-15.0f, 5.0f, 0.0f};
-        Vector3 relativeOffset = Vector3RotateByQuaternion(offset, plane.rb.orientation);
-        camera.position = Vector3Add(plane.rb.position, relativeOffset);
-        camera.target = plane.rb.position;
-        camera.up = WORLD_UP;
+            // Dynamic third-person camera
+            Vector3 desiredOffset = Vector3RotateByQuaternion(cameraOffset, plane.rb.orientation);
+            Vector3 desiredPosition = Vector3Add(plane.rb.position, desiredOffset);
+
+            // Smoothly interpolate camera position
+            camera.position = Vector3Lerp(camera.position, desiredPosition, deltaTime * cameraSmoothness);
+
+            // Camera target is slightly in front of the plane
+            Vector3 forward = Vector3RotateByQuaternion((Vector3){ 5.0f, 0.0f, 0.0f }, plane.rb.orientation);
+            camera.target = Vector3Add(plane.rb.position, forward);
+
+            // Up direction remains world up
+            camera.up = WORLD_UP;
+        } else {
+            // Camera
+            UpdateCamera(&camera, CAMERA_FREE);
+        }
 
         // Drawing
         BeginDrawing();
@@ -248,20 +256,11 @@ int main(void)
         planeModel.transform = planeTransform;
         DrawModel(planeModel, plane.rb.position, 1.0f, WHITE);
 
-        // Vector3 pointWorld = Vector3Add(plane.rb.position, TransformDirection(plane.rb, point));
-        // DrawSphere(pointWorld, 0.25f, RED);
-        // DrawLine3D(pointWorld, Vector3Scale(Vector3Add(pointWorld, TransformDirection(plane.rb, force)), 1.0f), GREEN);
-
         float axisLength = 3.0f;
         Vector3 origin = plane.rb.position;
         Vector3 xAxis = Vector3Add(origin, Vector3Scale(TransformDirection(plane.rb, (Vector3){1,0,0}), axisLength));
         Vector3 yAxis = Vector3Add(origin, Vector3Scale(TransformDirection(plane.rb, (Vector3){0,1,0}), axisLength));
         Vector3 zAxis = Vector3Add(origin, Vector3Scale(TransformDirection(plane.rb, (Vector3){0,0,1}), axisLength));
-
-        // Vector3 xAxis = Vector3Add(origin,(Vector3){axisLength,0,0});
-        // Vector3 yAxis = Vector3Add(origin,(Vector3){0,axisLength,0});
-        // Vector3 zAxis = Vector3Add(origin,(Vector3){0,0,axisLength});
-        
         DrawLine3D(origin, xAxis, RED);
         DrawLine3D(origin, yAxis, GREEN);
         DrawLine3D(origin, zAxis, BLUE);
@@ -279,18 +278,6 @@ int main(void)
             
             // Draw wing as colored sphere at CP
             DrawSphere(wingPos, 0.2f, wing->color);
-
-            // Vector3 localVelocity = GetPointVelocity(plane.rb, wing->center_of_pressure);
-            
-            // // Draw incoming airflow (scaled for visibility)
-            // Vector3 airflowDir = Vector3Scale(localVelocity, -1.0f);  // Scale for screen
-            // DrawLine3D(wingPos, Vector3Add(wingPos, airflowDir), RED);
-            
-            // Optionally draw wing normal
-            // TraceLog(LOG_INFO, "[%s] Lift: %0.5f %0.5f %0.5f", wing->name, wing->normal.x, wing->normal.y, wing->normal.z);
-
-            // Vector3 worldNormal = TransformDirection(plane.rb, wing->normal);
-            // DrawLine3D(wingPos, Vector3Add(wingPos, Vector3Scale(worldNormal, 1.0f)), BLUE);
         }
 
         for (int i = 0; i < plane.rb.debugForceCount; i++) {
