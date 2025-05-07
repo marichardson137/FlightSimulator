@@ -38,7 +38,9 @@ int main(void)
     camera.projection = CAMERA_PERSPECTIVE;
     camera.fovy = 45.0f;
 
-    Vector3 cameraOffset = (Vector3) { -10.0f, 3.0f, 0.0f }; // Offset behind and above
+    Vector3 cameraModeA = (Vector3) { -10.0f, 3.0f, 0.0f };
+    Vector3 cameraModeB = (Vector3) { 35.0f, 0.0f, 0.0f }; // Offset behind and above
+    Vector3 cameraOffset = cameraModeA; // Offset behind and above
     float cameraSmoothness = 5.0f; // Higher = snappier
 
     // Load plane model
@@ -279,6 +281,18 @@ int main(void)
                 timeScale *= 1.25f;
             if (IsGamepadButtonPressed(0, GAMEPAD_BUTTON_LEFT_FACE_DOWN))
                 timeScale *= 0.8f;
+
+            if (IsGamepadButtonPressed(0, GAMEPAD_BUTTON_RIGHT_TRIGGER_1))
+                camera.fovy -= 5.0f;
+            if (IsGamepadButtonPressed(0, GAMEPAD_BUTTON_LEFT_TRIGGER_1))
+                camera.fovy += 5.0f;
+
+            if (IsGamepadButtonPressed(0, GAMEPAD_BUTTON_RIGHT_THUMB)) {
+                if (cameraOffset.x == cameraModeA.x)
+                    cameraOffset = cameraModeB;
+                else
+                    cameraOffset = cameraModeA;
+            }
         }
 
         // Update plane
