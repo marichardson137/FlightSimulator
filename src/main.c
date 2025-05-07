@@ -19,7 +19,8 @@ int main(void)
 
     // Initialize window and graphics
     const int screenWidth = 1800;
-    const int screenHeight = 1000;
+    const int screenHeight = 900;
+    SetConfigFlags(FLAG_MSAA_4X_HINT); // Set MSAA 4X hint before windows creation
     InitWindow(screenWidth, screenHeight, "Flight Simulator");
     SetTargetFPS(60);
     SetWindowFocused();
@@ -218,11 +219,50 @@ int main(void)
             WingSetControlInput(&plane.wings[3], yawInput); // Rudder
         }
 
-        // Update plane
+        if (IsGamepadAvailable(0)) {
 
-        // Fixed timestep physics update
-        Vector3 point = (Vector3) { 0.0f, 0.0f, 10.0f };
-        Vector3 force = (Vector3) { 0.0f, 100.0f, 0.0f };
+            if (!pauseSimulation) {
+                // --- Throttle (RT/LT Triggers)
+                float throttleUp = GetGamepadAxisMovement(0, GAMEPAD_AXIS_RIGHT_TRIGGER);
+                float throttleDown = GetGamepadAxisMovement(0, GAMEPAD_AXIS_LEFT_TRIGGER);
+                plane.engine.throttle += throttleUp * deltaTime;
+                plane.engine.throttle -= throttleDown * deltaTime;
+                plane.engine.throttle = Clamp(plane.engine.throttle, 0.0f, 1.0f);
+
+                // --- Roll (Left stick X axis)
+                float rollInput = -GetGamepadAxisMovement(0, GAMEPAD_AXIS_LEFT_X);
+
+                WingSetControlInput(&plane.wings[0], -rollInput); // Left aileron
+                WingSetControlInput(&plane.wings[1], rollInput); // Right aileron
+
+                // --- Pitch (Left stick Y axis)
+                float pitchInput = -GetGamepadAxisMovement(0, GAMEPAD_AXIS_LEFT_Y);
+                WingSetControlInput(&plane.wings[2], pitchInput); // Elevator
+
+                // --- Yaw (Right stick X axis or triggers)
+                float yawInput = GetGamepadAxisMovement(0, GAMEPAD_AXIS_RIGHT_X);
+                WingSetControlInput(&plane.wings[3], yawInput); // Rudder
+            }
+
+            if (IsGamepadButtonPressed(0, GAMEPAD_BUTTON_LEFT_FACE_LEFT))
+                pauseSimulation = !pauseSimulation;
+
+            if (IsGamepadButtonPressed(0, GAMEPAD_BUTTON_LEFT_FACE_RIGHT)) {
+                // Reset plane
+                plane.rb.position = STARTING_POSITION;
+                plane.rb.velocity = (Vector3) { STARTING_VELOCITY, 0.0f, 0.0f };
+                plane.rb.orientation = QuaternionIdentity();
+                plane.rb.angularVelocity = Vector3Zero();
+                camera.position = STARTING_POSITION;
+            }
+
+            if (IsGamepadButtonPressed(0, GAMEPAD_BUTTON_LEFT_FACE_UP))
+                timeScale *= 1.25f;
+            if (IsGamepadButtonPressed(0, GAMEPAD_BUTTON_LEFT_FACE_DOWN))
+                timeScale *= 0.8f;
+        }
+
+        // Update plane
 
         if (!pauseSimulation) {
             physicsAccumulator += deltaTime;
@@ -256,14 +296,14 @@ int main(void)
 
         // Drawing
         BeginDrawing();
-        ClearBackground(DARKPURPLE);
+        ClearBackground(SKYBLUE);
 
         BeginMode3D(camera);
 
         // Draw ground grid for reference
         // DrawGrid(100, 10.0f);
 
-        DrawModel(terrain, (Vector3) { -256, 0, -256 }, 10.0f, RAYWHITE);
+        DrawModel(terrain, (Vector3) { -256, 0, -256 }, 10.0f, GREEN);
 
         // Draw plane model
 
@@ -346,7 +386,7 @@ int main(void)
             plane.rb.applyGravity ? GREEN : RED);
         DrawText(TextFormat("Physics: %s", pauseSimulation ? "PAUSED" : "RUNNING"), 260, screenHeight - 30, 20,
             pauseSimulation ? RED : GREEN);
-        DrawText(TextFormat("Time Scale: %.2fx", timeScale), 455, screenHeight - 30, 20, SKYBLUE);
+        DrawText(TextFormat("Time Scale: %.2fx", timeScale), 455, screenHeight - 30, 20, RAYWHITE);
 
         EndDrawing();
     }
