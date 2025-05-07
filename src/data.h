@@ -1,8 +1,6 @@
 #ifndef DATA_H
 #define DATA_H
 
-#include "raylib.h"
-
 typedef struct {
     float alpha;  // Angle of attack in degrees
     float Cl;     // Lift coefficient
@@ -115,7 +113,7 @@ const AirfoilSample NACA_2412_data[] = {
 };
 
 // NACA 64-206 (naca64206-il) Xfoil prediction polar at RE=1,000,000 Ncrit=9
-const Vector3 NACA_64_206_data[] = {
+const AirfoilSample NACA_64_206_data[] = {
     {-8.250f, -0.5409f, 0.08484f}, {-8.000f, -0.5408f, 0.08082f}, {-7.750f, -0.5443f, 0.07658f},
     {-7.500f, -0.5409f, 0.07126f}, {-7.250f, -0.5348f, 0.06609f}, {-7.000f, -0.5270f, 0.06091f},
     {-6.750f, -0.5305f, 0.05132f}, {-6.500f, -0.5193f, 0.04655f}, {-6.250f, -0.5049f, 0.04341f},

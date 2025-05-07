@@ -3,11 +3,11 @@
 
 #include "raylib.h"
 #include "raymath.h"
-#include "physics.h"
+#include "plane.h"
 #include <stdio.h>
 
 // Draw flight data HUD
-void DrawFlightDataHUD(RigidBody rb, int screenWidth, int screenHeight) {
+void DrawFlightDataHUD(Plane plane, int screenWidth, int screenHeight) {
     char buffer[128];
     
     // Draw in top-left corner
@@ -18,29 +18,27 @@ void DrawFlightDataHUD(RigidBody rb, int screenWidth, int screenHeight) {
     DrawText("FLIGHT DATA", x, y, 20, RAYWHITE);
     y += lineHeight + 5;
     
-    sprintf(buffer, "Altitude: %.1f m", rb.position.y);
+    sprintf(buffer, "Altitude: %.1f m", plane.altitude);
     DrawText(buffer, x, y, 18, SKYBLUE);
     y += lineHeight;
     
-    sprintf(buffer, "Velocity: %.1f m/s", Vector3Length(rb.velocity));
+    sprintf(buffer, "Velocity: %.1f m/s", plane.airspeed);
     DrawText(buffer, x, y, 18, SKYBLUE);
     y += lineHeight;
 
-    sprintf(buffer, "V-Speed: %.1f m/s", rb.velocity.y);
+    sprintf(buffer, "V-Speed: %.1f m/s", plane.verticalSpeed);
     DrawText(buffer, x, y, 18, SKYBLUE);
     y += lineHeight;
     
-    Vector3 angles = calculateFlightAngles(rb);
-
-    sprintf(buffer, "Heading: %.1f°", angles.x);
+    sprintf(buffer, "Heading: %.1f°", plane.heading);
     DrawText(buffer, x, y, 18, SKYBLUE);
     y += lineHeight;
     
-    sprintf(buffer, "Pitch: %.1f°", angles.y);
+    sprintf(buffer, "Pitch: %.1f°", plane.pitch);
     DrawText(buffer, x, y, 18, SKYBLUE);
     y += lineHeight;
     
-    sprintf(buffer, "Roll: %.1f°", angles.z);
+    sprintf(buffer, "Roll: %.1f°", plane.roll);
     DrawText(buffer, x, y, 18, SKYBLUE);
     y += lineHeight;
 }

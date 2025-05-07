@@ -2,6 +2,7 @@
 #define PHYSICS_H
 
 #include "raymath.h"
+#include "debug.h"
 
 // Constants for physics and simulation
 #define FIXED_PHYSICS_TIMESTEP 0.001f // Fixed timestep for physics (1ms)
@@ -29,6 +30,12 @@ typedef struct {
     // Force accumulators
     Vector3 force;             // World space
     Vector3 torque;            // Body space
+
+    // Debug information
+    bool applyGravity;
+    Vector3 debugForces[MAX_DEBUG_FORCES];   // Store last applied forces for visualization
+    Vector3 debugPoints[MAX_DEBUG_FORCES];   // Store points where forces were applied
+    int debugForceCount;  
 } RigidBody;
 
 // Transform a direction from Body space to World space
@@ -62,18 +69,42 @@ void AddForceAtPoint(RigidBody* rbp, Vector3 force, Vector3 point) {
     
     // Calculate and apply torque
     rbp->torque = Vector3Add(rbp->torque, Vector3CrossProduct(point, force));
+
+    // Store for debug visualization if there's room
+    if (rbp->debugForceCount < MAX_DEBUG_FORCES) {
+        // Convert local point to world for visualization
+        Vector3 worldPoint = Vector3Add(rbp->position, 
+                                        TransformDirection(*rbp, point));
+        
+        rbp->debugForces[rbp->debugForceCount] = worldForce;
+        rbp->debugPoints[rbp->debugForceCount] = worldPoint;
+        rbp->debugForceCount++;
+    }
 }
 
 // Add a force in local body coordinates
 void AddRelativeForce(RigidBody* rbp, Vector3 force) {
     Vector3 worldForce = TransformDirection(*rbp, force);
     rbp->force = Vector3Add(rbp->force, worldForce);
+
+    // Store for debug visualization
+    if (rbp->debugForceCount < MAX_DEBUG_FORCES) {
+        rbp->debugForces[rbp->debugForceCount] = worldForce;
+        rbp->debugPoints[rbp->debugForceCount] = rbp->position;
+        rbp->debugForceCount++;
+    }
 }
 
 // Update rigid body physics using semi-implicit Euler integration
 void UpdateRigidBody(RigidBody* rbp, float dt) {
     // Apply gravity
-    rbp->force.y -= rbp->mass * GRAVITY_ACCELERATION;
+    if (rbp->applyGravity)
+        rbp->force.y -= rbp->mass * GRAVITY_ACCELERATION;
+
+    // TODO: double check
+    float linearDampingCoef = 0.01f;
+    Vector3 linearDamping = Vector3Scale(rbp->velocity, -linearDampingCoef);
+    rbp->force = Vector3Add(rbp->force, linearDamping);
         
     // Calculate linear acceleration (F = ma → a = F/m)
     Vector3 acceleration = Vector3Scale(rbp->force, 1.0f / rbp->mass);
@@ -89,6 +120,11 @@ void UpdateRigidBody(RigidBody* rbp, float dt) {
 
     // Calculate gyroscopic torque (ω × (I·ω))
     Vector3 gyroscopicTorque = Vector3CrossProduct(rbp->angularVelocity, angularMomentum);
+
+    // TODO: double check
+    float angularDampingCoef = 0.05f;
+    Vector3 angularDamping = Vector3Scale(rbp->angularVelocity, -angularDampingCoef);
+    rbp->torque = Vector3Add(rbp->torque, angularDamping);
 
     // Net torque = applied torque - gyroscopic torque
     Vector3 netTorque = Vector3Subtract(rbp->torque, gyroscopicTorque);
