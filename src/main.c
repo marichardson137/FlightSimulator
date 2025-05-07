@@ -73,7 +73,7 @@ int main(void)
     Texture2D heightmapTex = LoadTextureFromImage(heightmap);
 
     // Create terrain mesh
-    Mesh terrainMesh = GenMeshHeightmap(heightmap, (Vector3) { 256, 16, 256 });
+    Mesh terrainMesh = GenMeshHeightmap(heightmap, (Vector3) { 128, 16, 128 });
     Model terrain = LoadModelFromMesh(terrainMesh);
     terrain.materials[0].maps[MATERIAL_MAP_DIFFUSE].color = GREEN;
     terrain.materials[0].maps[MATERIAL_MAP_DIFFUSE].texture = heightmapTex;
@@ -129,23 +129,23 @@ int main(void)
     // Main left wing
     Wing leftWing;
     WingInit(&leftWing, "Left Wing",
-        (Vector3) { WING_OFFSET_X, 0.9f, -2.7f }, // Position
+        (Vector3) { WING_OFFSET_X, 0.925f, -2.7f }, // Position
         (Vector3) { 0.0f, 1.0f, 0.0f }, // Normal (up)
         5.5f, 1.47f, // Wingspan, chord
         &airfoil_naca_2412, // Airfoil data
         0.2f, // Flap ratio
-        SKYBLUE); // Color
+        ORANGE); // Color
     AddWing(&plane, leftWing);
 
     // Main right wing
     Wing rightWing;
     WingInit(&rightWing, "Right Wing",
-        (Vector3) { WING_OFFSET_X, 0.9f, 2.7f }, // Position
+        (Vector3) { WING_OFFSET_X, 0.925f, 2.7f }, // Position
         (Vector3) { 0.0f, 1.0f, 0.0f }, // Normal
         5.5f, 1.47f, // Wingspan, chord
         &airfoil_naca_2412, // Airfoil data
         0.2f, // Flap ratio
-        SKYBLUE); // Color
+        ORANGE); // Color
     AddWing(&plane, rightWing);
 
     // Horizontal stabilizer (elevator)
@@ -153,7 +153,7 @@ int main(void)
     WingInit(&elevator, "Elevator",
         (Vector3) { TAIL_OFFSET_X, 0.0f, 0.0f }, // Position
         (Vector3) { 0.0f, 1.0f, 0.0f }, // Normal
-        1.35f, 1.35f, // Wingspan, chord
+        1.5f, 1.35f, // Wingspan, chord
         &airfoil_naca_0012, // Airfoil data
         1.0f, // Flap ratio
         GREEN); // Color
@@ -350,7 +350,7 @@ int main(void)
         // Draw ground grid for reference
         // DrawGrid(100, 10.0f);
 
-        DrawModelWires(terrain, (Vector3) { -512, 0, -512 }, 10.0f, (Color) { 144, 238, 144, 255 });
+        DrawModel(terrain, (Vector3) { -512, 0, -512 }, 10.0f, (Color) { 144, 238, 144, 255 });
 
         // Draw plane model
 
@@ -444,7 +444,7 @@ int main(void)
                 TransformDirection(plane.rb, wing->center_of_pressure));
 
             // Draw wing as colored sphere at CP
-            DrawSphere(wingPos, 0.2f, wing->color);
+            DrawSphere(wingPos, 0.1f, wing->color);
         }
 
         for (int i = 0; i < plane.rb.debugForceCount; i++) {
