@@ -21,8 +21,8 @@ int main(void)
     Vector3 STARTING_POSITION = { 0.0f, 200.0f, 0.0f };
 
     // Initialize window and graphics
-    const int screenWidth = 1800;
-    const int screenHeight = 900;
+    const int screenWidth = 1440;
+    const int screenHeight = 850;
     SetConfigFlags(FLAG_MSAA_4X_HINT); // Set MSAA 4X hint before windows creation
     InitWindow(screenWidth, screenHeight, "Flight Simulator");
     SetTargetFPS(60);
@@ -39,13 +39,13 @@ int main(void)
     camera.fovy = 45.0f;
 
     Vector3 cameraModeA = (Vector3) { -10.0f, 3.0f, 0.0f };
-    Vector3 cameraModeB = (Vector3) { 35.0f, 0.0f, 0.0f }; // Offset behind and above
+    Vector3 cameraModeB = (Vector3) { 30.0f, 0.0f, 30.0f }; // Offset behind and above
     Vector3 cameraOffset = cameraModeA; // Offset behind and above
     float cameraSmoothness = 5.0f; // Higher = snappier
 
     // Load plane model
     Model planeModel = LoadModel("assets/models/cessna172.glb");
-    Material materials[20]; // assuming max 20 meshes
+    Material materials[planeModel.meshCount];
     for (int i = 0; i < planeModel.meshCount; i++) {
         materials[i] = LoadMaterialDefault();
         materials[i].maps[MATERIAL_MAP_DIFFUSE].color = WHITE;
@@ -205,6 +205,18 @@ int main(void)
             camera.position = STARTING_POSITION;
         }
 
+        if (IsKeyPressed(KEY_C)) {
+            if (cameraOffset.x == cameraModeA.x)
+                cameraOffset = cameraModeB;
+            else
+                cameraOffset = cameraModeA;
+        }
+
+        if (IsKeyPressed(KEY_I))
+            camera.fovy -= 5.0f;
+        if (IsKeyPressed(KEY_O))
+            camera.fovy += 5.0f;
+
         // Handle keyboard input
         if (!pauseSimulation) {
             // Throttle control
@@ -265,10 +277,10 @@ int main(void)
                 WingSetControlInput(&plane.wings[3], yawInput); // Rudder
             }
 
-            if (IsGamepadButtonPressed(0, GAMEPAD_BUTTON_LEFT_FACE_LEFT))
+            if (IsGamepadButtonPressed(0, GAMEPAD_BUTTON_LEFT_FACE_RIGHT))
                 pauseSimulation = !pauseSimulation;
 
-            if (IsGamepadButtonPressed(0, GAMEPAD_BUTTON_LEFT_FACE_RIGHT)) {
+            if (IsGamepadButtonPressed(0, GAMEPAD_BUTTON_LEFT_FACE_LEFT)) {
                 // Reset plane
                 plane.rb.position = STARTING_POSITION;
                 plane.rb.velocity = (Vector3) { STARTING_VELOCITY, 0.0f, 0.0f };
@@ -350,6 +362,7 @@ int main(void)
         for (int i = 0; i < planeModel.meshCount; i++) {
             Matrix localMeshTransform = MatrixIdentity();
 
+            // Propeller
             if (i == 10) {
                 // Local pivot point of propeller in model space
                 float yOffset = 0.27f; // propeller center in model/local space
@@ -361,23 +374,46 @@ int main(void)
                 localMeshTransform = MatrixMultiply(MatrixMultiply(fromPivot, rotation), toPivot);
             }
 
+            // Elevator
             if (i == 5) {
                 // Local pivot point of propeller in model space
                 float xOffset = -5.0f; // propeller center in model/local space
                 Matrix toPivot = MatrixTranslate(xOffset, 0.0f, 0.0f);
                 Matrix fromPivot = MatrixTranslate(-xOffset, 0.0f, 0.0f);
-                Matrix rotation = MatrixRotateZ((-plane.wings[2].controlInput) * 30 * DEG2RAD); // Spin around local X
+                Matrix rotation = MatrixRotateZ((-plane.wings[2].controlInput) * 30 * DEG2RAD);
 
                 // Rotate around pivot: T⁻¹ * R * T
                 localMeshTransform = MatrixMultiply(MatrixMultiply(fromPivot, rotation), toPivot);
             }
 
+            // Rudder
             if (i == 6) {
                 // Local pivot point of propeller in model space
                 float xOffset = -5.5f; // propeller center in model/local space
                 Matrix toPivot = MatrixTranslate(xOffset, 0.0f, 0.0f);
                 Matrix fromPivot = MatrixTranslate(-xOffset, 0.0f, 0.0f);
-                Matrix rotation = MatrixRotateY((-plane.wings[3].controlInput) * 15 * DEG2RAD); // Spin around local X
+                Matrix rotation = MatrixRotateY((-plane.wings[3].controlInput) * 15 * DEG2RAD);
+
+                // Rotate around pivot: T⁻¹ * R * T
+                localMeshTransform = MatrixMultiply(MatrixMultiply(fromPivot, rotation), toPivot);
+            }
+
+            // Right Aileron
+            if (i == 20) {
+                // Local pivot point of propeller in model space
+                Matrix toPivot = MatrixTranslate(-1.0f, 0.9f, 0.0f);
+                Matrix fromPivot = MatrixTranslate(1.0f, -0.9f, 0.0f);
+                Matrix rotation = MatrixRotateZ((plane.wings[1].controlInput) * 15 * DEG2RAD);
+
+                // Rotate around pivot: T⁻¹ * R * T
+                localMeshTransform = MatrixMultiply(MatrixMultiply(fromPivot, rotation), toPivot);
+            }
+            // Left Aileron
+            if (i == 3) {
+                // Local pivot point of propeller in model space
+                Matrix toPivot = MatrixTranslate(-1.0f, 0.9f, 0.0f);
+                Matrix fromPivot = MatrixTranslate(1.0f, -0.9f, 0.0f);
+                Matrix rotation = MatrixRotateZ((plane.wings[0].controlInput) * 15 * DEG2RAD);
 
                 // Rotate around pivot: T⁻¹ * R * T
                 localMeshTransform = MatrixMultiply(MatrixMultiply(fromPivot, rotation), toPivot);
@@ -391,19 +427,14 @@ int main(void)
         // Matrix finalTransform = MatrixMultiply(localMeshTransform, planeTransform);
         // DrawMesh(planeModel.meshes[3], materials[3], finalTransform);
 
-        float axisLength = 3.0f;
-        Vector3 origin = plane.rb.position;
-        Vector3 xAxis = Vector3Add(origin, Vector3Scale(TransformDirection(plane.rb, (Vector3) { 1, 0, 0 }), axisLength));
-        Vector3 yAxis = Vector3Add(origin, Vector3Scale(TransformDirection(plane.rb, (Vector3) { 0, 1, 0 }), axisLength));
-        Vector3 zAxis = Vector3Add(origin, Vector3Scale(TransformDirection(plane.rb, (Vector3) { 0, 0, 1 }), axisLength));
-        DrawLine3D(origin, xAxis, RED);
-        DrawLine3D(origin, yAxis, GREEN);
-        DrawLine3D(origin, zAxis, BLUE);
-
-        // Draw the engine
-        DrawSphere(Vector3Add(plane.rb.position,
-                       TransformDirection(plane.rb, plane.engine.position)),
-            0.2f, ORANGE);
+        // float axisLength = 3.0f;
+        // Vector3 origin = plane.rb.position;
+        // Vector3 xAxis = Vector3Add(origin, Vector3Scale(TransformDirection(plane.rb, (Vector3) { 1, 0, 0 }), axisLength));
+        // Vector3 yAxis = Vector3Add(origin, Vector3Scale(TransformDirection(plane.rb, (Vector3) { 0, 1, 0 }), axisLength));
+        // Vector3 zAxis = Vector3Add(origin, Vector3Scale(TransformDirection(plane.rb, (Vector3) { 0, 0, 1 }), axisLength));
+        // DrawLine3D(origin, xAxis, RED);
+        // DrawLine3D(origin, yAxis, GREEN);
+        // DrawLine3D(origin, zAxis, BLUE);
 
         for (int i = 0; i < plane.wingCount; i++) {
             Wing* wing = &plane.wings[i];
