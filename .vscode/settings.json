@@ -3,6 +3,7 @@
         "complex": "c",
         "cmath": "c",
         "__node_handle": "c",
-        "raylib.h": "c"
+        "raylib.h": "c",
+        "rlights.h": "c"
     }
 }

@@ -1,5 +1,8 @@
 #include "raylib.h"
 #include "raymath.h"
+#define RLIGHTS_IMPLEMENTATION
+#include "rlights.h"
+
 #include "data.h"
 #include "physics.h"
 #include "plane.h"
@@ -48,23 +51,41 @@ int main(void)
         materials[i].maps[MATERIAL_MAP_DIFFUSE].color = WHITE;
     }
 
+    Shader lighting = LoadShader("assets/shaders/lighting.vs", "assets/shaders/lighting.fs");
+
+    for (int i = 0; i < planeModel.meshCount; i++) {
+        materials[i].shader = lighting;
+    }
+
+    // Set up lighting shader values
+    SetShaderValue(lighting, GetShaderLocation(lighting, "ambient"), (float[4]) { 0.5f, 0.5f, 0.5f, 1.0f }, SHADER_UNIFORM_VEC4);
+    SetShaderValue(lighting, GetShaderLocation(lighting, "viewPos"), &camera.position, SHADER_UNIFORM_VEC3); // Camera position
+
+    // Enable light
+    Light light = CreateLight(LIGHT_DIRECTIONAL, (Vector3) { 10000, 10000, 10000 }, (Vector3) { 0, 0, 0 }, WHITE, lighting);
+
     // Terrain
 
     // Load heightmap image (can be procedural too)
-    Image heightmap = GenImagePerlinNoise(512, 512, 0, 0, 16);
+    Image heightmap
+        = GenImagePerlinNoise(1024, 1024, 0, 0, 16);
+    ImageBlurGaussian(&heightmap, 1);
     Texture2D heightmapTex = LoadTextureFromImage(heightmap);
 
     // Create terrain mesh
     Mesh terrainMesh = GenMeshHeightmap(heightmap, (Vector3) { 256, 16, 256 });
     Model terrain = LoadModelFromMesh(terrainMesh);
+    terrain.materials[0].maps[MATERIAL_MAP_DIFFUSE].color = GREEN;
     terrain.materials[0].maps[MATERIAL_MAP_DIFFUSE].texture = heightmapTex;
+    terrain.materials[0].shader = lighting;
 
     // Plane physics
 
     // Create airfoils
-    Airfoil airfoil_naca_0012 = CreateAirfoil(NACA_0012_data,
-        sizeof(NACA_0012_data) / sizeof(NACA_0012_data[0]),
-        -18.5f, 18.5f);
+    Airfoil airfoil_naca_0012
+        = CreateAirfoil(NACA_0012_data,
+            sizeof(NACA_0012_data) / sizeof(NACA_0012_data[0]),
+            -18.5f, 18.5f);
 
     Airfoil airfoil_naca_2412 = CreateAirfoil(NACA_2412_data,
         sizeof(NACA_2412_data) / sizeof(NACA_2412_data[0]),
@@ -294,6 +315,8 @@ int main(void)
             UpdateCamera(&camera, CAMERA_FREE);
         }
 
+        SetShaderValue(lighting, GetShaderLocation(lighting, "viewPos"), &camera.position, SHADER_UNIFORM_VEC3); // Camera position
+
         // Drawing
         BeginDrawing();
         ClearBackground(SKYBLUE);
@@ -303,7 +326,7 @@ int main(void)
         // Draw ground grid for reference
         // DrawGrid(100, 10.0f);
 
-        DrawModel(terrain, (Vector3) { -256, 0, -256 }, 10.0f, GREEN);
+        DrawModel(terrain, (Vector3) { -512, 0, -512 }, 10.0f, (Color) { 144, 238, 144, 255 });
 
         // Draw plane model
 
