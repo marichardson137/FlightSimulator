@@ -13,9 +13,13 @@
 
 int main(void)
 {
+    // TODO: move to definitions
+    float STARTING_VELOCITY = 75.0f;
+    Vector3 STARTING_POSITION = { 0.0f, 200.0f, 0.0f };
+
     // Initialize window and graphics
-    const int screenWidth = 1280;
-    const int screenHeight = 720;
+    const int screenWidth = 1800;
+    const int screenHeight = 1000;
     InitWindow(screenWidth, screenHeight, "Flight Simulator");
     SetTargetFPS(60);
     SetWindowFocused();
@@ -24,7 +28,7 @@ int main(void)
 
     // Camera settings with multiple views
     Camera camera = { 0 };
-    camera.position = (Vector3) { -100.0f, 100.0f, 0.0f };
+    camera.position = STARTING_POSITION;
     camera.target = (Vector3) { 1.0f, 100.0f, 0.0f };
     camera.up = (Vector3) { 0.0f, 1.0f, 0.0f };
     camera.projection = CAMERA_PERSPECTIVE;
@@ -40,8 +44,19 @@ int main(void)
     for (int i = 0; i < planeModel.meshCount; i++) {
         materials[i] = LoadMaterialDefault();
         Color color = ColorFromHSV(i * (360.0f / planeModel.meshCount), 0.7f, 0.9f);
-        materials[i].maps[MATERIAL_MAP_DIFFUSE].color = color;
+        materials[i].maps[MATERIAL_MAP_DIFFUSE].color = WHITE;
     }
+
+    // Terrain
+
+    // Load heightmap image (can be procedural too)
+    Image heightmap = GenImagePerlinNoise(512, 512, 0, 0, 16);
+    Texture2D heightmapTex = LoadTextureFromImage(heightmap);
+
+    // Create terrain mesh
+    Mesh terrainMesh = GenMeshHeightmap(heightmap, (Vector3) { 256, 16, 256 });
+    Model terrain = LoadModelFromMesh(terrainMesh);
+    terrain.materials[0].maps[MATERIAL_MAP_DIFFUSE].texture = heightmapTex;
 
     // Plane physics
 
@@ -63,10 +78,8 @@ int main(void)
     };
     Matrix inverseInertia = MatrixInvert(inertia);
 
-    float STARTING_VELOCITY = 75.0f;
-
     plane.rb.mass = 1000.0f; // 1000 kg
-    plane.rb.position = (Vector3) { -100.0f, 100.0f, 0.0f };
+    plane.rb.position = STARTING_POSITION;
     plane.rb.velocity = (Vector3) { STARTING_VELOCITY, 0.0f, 0.0f };
     plane.rb.orientation = QuaternionIdentity();
     plane.rb.angularVelocity = Vector3Zero();
@@ -163,11 +176,11 @@ int main(void)
 
         // Reset plane
         if (IsKeyPressed(KEY_R)) {
-            plane.rb.position = (Vector3) { 0.0f, 100.0f, 0.0f };
+            plane.rb.position = STARTING_POSITION;
             plane.rb.velocity = (Vector3) { STARTING_VELOCITY, 0.0f, 0.0f };
             plane.rb.orientation = QuaternionIdentity();
             plane.rb.angularVelocity = Vector3Zero();
-            camera.position = (Vector3) { 0.0f, 100.0f, 0.0f };
+            camera.position = STARTING_POSITION;
         }
 
         // Handle keyboard input
@@ -220,6 +233,9 @@ int main(void)
                 physicsAccumulator -= FIXED_PHYSICS_TIMESTEP;
             }
 
+            // Update propeller angle
+            plane.engine.propellerAngle += plane.engine.throttle * 100.0f * deltaTime;
+
             // Dynamic third-person camera
             Vector3 desiredOffset = Vector3RotateByQuaternion(cameraOffset, plane.rb.orientation);
             Vector3 desiredPosition = Vector3Add(plane.rb.position, desiredOffset);
@@ -240,17 +256,16 @@ int main(void)
 
         // Drawing
         BeginDrawing();
-        ClearBackground((Color) { 20, 30, 40, 255 });
+        ClearBackground(DARKPURPLE);
 
         BeginMode3D(camera);
 
         // Draw ground grid for reference
-        DrawGrid(100, 10.0f);
+        // DrawGrid(100, 10.0f);
+
+        DrawModel(terrain, (Vector3) { -256, 0, -256 }, 10.0f, RAYWHITE);
 
         // Draw plane model
-
-        // Update propeller angle
-        plane.engine.propellerAngle += plane.engine.throttle * 50.0f * deltaTime;
 
         // Plane's global transform
         Matrix orientationMatrix = QuaternionToMatrix(plane.rb.orientation);
@@ -337,6 +352,10 @@ int main(void)
     }
 
     // Clean up
+    UnloadTexture(heightmapTex);
+    UnloadModel(terrain);
+    UnloadModel(planeModel);
+
     CloseWindow();
 
     return 0;
